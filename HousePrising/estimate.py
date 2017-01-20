@@ -34,10 +34,12 @@ class RandomForest:
     # print X
     y_train = self.df["SalePrice"].values
 
-    X_test = self.test_df.iloc[:,:-1].values
+    X_test = self.test_df.drop("SalePrice",axis=1).iloc[:,:-1].values
     # print X
     # y_train = self.df["SalePrice"].values
     # print y.size
+
+
     # X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         # test_size=0.4,
                                                         # random_state=1)
@@ -46,16 +48,21 @@ class RandomForest:
                                    n_jobs=-1)
     #gridsearchしたいハイパーパラメータの入力
     params =  {
-    'n_estimators' : [600, 700, 800]
+    'n_estimators' : [700]
     }
     forest = GridSearchCV(estimator=forest, param_grid=params)
+    print X_train.shape
+    print X_test.shape
     forest.fit(X_train, y_train)
     #gridsearchによる最適なハイパーパラメータを出力
     print (forest.best_params_)
     y_train_pred = forest.predict(X_train)
     y_test_pred = forest.predict(X_test)
-    print y_test_pred
-    y_test_pred.to_csv("submission.csv")
+    print y_test_pred.size
+
+    output_df = pd.DataFrame({"Id" : np.arange(1461, 2920, 1),"SalePrice" : y_test_pred})
+    output_df.to_csv("submission.csv", index=None)
+
 
     # #平均二乗誤差
     # print('MSE train: %.3f, test: %.3f' % (mean_squared_error(y_train, y_train_pred),
@@ -82,14 +89,20 @@ class MachineLearning:
     # self.all_df = pd.concat((self.df.loc[:,"MSSubClass":"SaleCondition"], self.test_df.loc[:,"MSSubClass":"SaleCondition"]))
 
   def preProcessing(self):
+
     #　欠損値補完のインスタンスを生成
-    imr = Imputer(missing_values="Nan", strategy="most_frequent", axis=0)
+    # imr = Imputer(missing_values="NaN", strategy="most_frequent", axis=0)
     self.all_df = pd.get_dummies(self.all_df)
     # imr = imr.fit(self.all_df.dropna())
     self.df = pd.get_dummies(self.df)
     self.df = self.df.reindex(columns = self.all_df.columns, fill_value=0)
     self.test_df = pd.get_dummies(self.test_df)
     self.test_df = self.test_df.reindex(columns = self.all_df.columns, fill_value=0)
+    # 欠損補完
+    self.all_df = self.all_df.fillna(self.all_df.mean())
+    self.df = self.df.fillna(self.df.mean())
+    self.test_df = self.test_df.fillna(self.test_df.mean())
+
 
 
     # valid_cols=["SalePrice","平均価格","最大価格","最小価格","販売方法","階数","総専面積","販売戸数","平均専面","敷地面積","建築面積","延床面積","販売戸数"]
