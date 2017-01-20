@@ -48,7 +48,7 @@ class RandomForest:
                                    n_jobs=-1)
     #gridsearchしたいハイパーパラメータの入力
     params =  {
-    'n_estimators' : [700]
+    'n_estimators' : [699]
     }
     forest = GridSearchCV(estimator=forest, param_grid=params)
     print X_train.shape
@@ -56,6 +56,11 @@ class RandomForest:
     forest.fit(X_train, y_train)
     #gridsearchによる最適なハイパーパラメータを出力
     print (forest.best_params_)
+    
+    # importances = forest.feature_importances_
+    # indices = np.argsort(importances)[::-1]
+    # for f in range(X_train.shape[1]):
+    #   print("%2d) %-*s %f" % (f+1, 30, feat_labels[indices[f]], importances[indices[f]]))
     y_train_pred = forest.predict(X_train)
     y_test_pred = forest.predict(X_test)
     print y_test_pred.size
