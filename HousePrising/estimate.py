@@ -14,6 +14,12 @@ from sklearn.preprocessing import Imputer
 
 from sklearn.grid_search import GridSearchCV
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+import os
+os.environ['PATH'] = os.environ['PATH'] + ';C:¥TDM-GCC-64¥bin'
+import xgboost as xgb
+
 class ExploratoryDataAnalysis:
   def __init__(self, df):
     self.df = df
@@ -28,42 +34,70 @@ class RandomForest:
   def __init__(self, df, test_df):
     self.df = df
     self.test_df = test_df
+    self.stdsc = StandardScaler()
 
   def execute(self):
     X_train = self.df.drop("SalePrice",axis=1).iloc[:,:-1].values
     # print X
+    X_train = self.stdsc.fit_transform(X_train)
     y_train = self.df["SalePrice"].values
 
     X_test = self.test_df.drop("SalePrice",axis=1).iloc[:,:-1].values
     # print X
+    X_test = self.stdsc.transform(X_test)
     # y_train = self.df["SalePrice"].values
     # print y.size
 
 
     # X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         # test_size=0.4,
-                                                        # random_state=1)
-    forest = RandomForestRegressor(criterion='mse',
-                                   random_state=1,
-                                   n_jobs=-1)
-    #gridsearchしたいハイパーパラメータの入力
-    params =  {
-    'n_estimators' : [699]
-    }
-    forest = GridSearchCV(estimator=forest, param_grid=params)
-    print X_train.shape
-    print X_test.shape
-    forest.fit(X_train, y_train)
-    #gridsearchによる最適なハイパーパラメータを出力
-    print (forest.best_params_)
-    
-    # importances = forest.feature_importances_
-    # indices = np.argsort(importances)[::-1]
-    # for f in range(X_train.shape[1]):
-    #   print("%2d) %-*s %f" % (f+1, 30, feat_labels[indices[f]], importances[indices[f]]))
-    y_train_pred = forest.predict(X_train)
-    y_test_pred = forest.predict(X_test)
-    print y_test_pred.size
+                                                     # random_state=1)
+
+    # forest = RandomForestRegressor(criterion='mse',
+    #                                random_state=1,
+    #                                n_jobs=-1)
+    # #gridsearchしたいハイパーパラメータの入力
+    # params =  {
+    #             'n_estimators' : [690, 699, 700, 691,692,693,694,695,696,697,698]
+    #             }
+    # forest = GridSearchCV(estimator=forest, param_grid=params)
+    # # print X_train.shape
+    # # print X_test.shape
+
+    # forest.fit(X_train, y_train)
+    # #gridsearchによる最適なハイパーパラメータを出力
+    # print (forest.best_params_)
+    # # importances = forest.feature_importances_
+    # # indices = np.argsort(importances)[::-1]
+    # # for f in range(X_train.shape[1]):
+    # #   print("%2d) %-*s %f" % (f+1, 30, feat_labels[indices[f]], importances[indices[f]]))
+    # y_train_pred = forest.predict(X_train)
+    # y_test_pred = forest.predict(X_test)
+
+    # 線形regression
+    # regressor = LinearRegression()
+    # regressor.fit(X_train, y_train)
+    # y_test_pred = regressor.predict(X_test)
+
+    #  dtrain = xgb.DMatrix(X_train, y_train)
+    #  dtest = xgb.DMatrix(X_test, y_test)
+    # params = {"max_depth":2, "eta":0.1}
+    #  model = xgb.cv(params, dtrain,  num_boost_round=500, early_stopping_rounds=10)
+    #  model.loc[30:,["test-rmse-mean", "train-rmse-mean"]].plot()
+
+
+
+    params = {'max_depth': [3, 5, 10], 'learning_rate': [0.05, 0.1], 'max_depth': [3, 5, 10, 100], 'subsample': [0.8, 0.85, 0.9, 0.95], 'colsample_bytree': [0.5, 1.0]}
+    # モデルのインスタンス作成
+    model_xgb = xgb.XGBRegressor()
+    # 10-fold Cross Validationでパラメータ選定
+    # model_xgb = xgb.XGBRegressor(n_estimators=360, max_depth=2, learning_rate=0.1) #the params were tuned using xgb.cv
+    model_xgb.fit(X_train, y_train)
+    y_test_pred = model_xgb.predict(X_test)
+    # cv = GridSearchCV(model_xgb, params, cv = 10, scoring= 'mean_squared_error', n_jobs =1)
+    # cv.fit(X_train, y_train)
+    # cv.fit(X_train, y_train)
+    # y_test_pred = cv.predict(X_test)
 
     output_df = pd.DataFrame({"Id" : np.arange(1461, 2920, 1),"SalePrice" : y_test_pred})
     output_df.to_csv("submission.csv", index=None)
@@ -91,6 +125,18 @@ class MachineLearning:
     self.df = pd.read_csv(self.csv)
     self.test_df = pd.read_csv(self.test_csv)
     self.all_df = pd.concat((self.df, self.test_df) )
+    # self.all_df.drop(['Utilities', 'RoofMatl', 'MasVnrArea', 'BsmtFinSF1', 'BsmtFinSF2', 'BsmtUnfSF', 'Heating', 'LowQualFinSF',
+    #            'BsmtFullBath', 'BsmtHalfBath', 'Functional', 'GarageYrBlt', 'GarageArea', 'GarageCond', 'WoodDeckSF',
+    #            'OpenPorchSF', 'EnclosedPorch', '3SsnPorch', 'ScreenPorch', 'PoolArea', 'PoolQC', 'Fence', 'MiscFeature', 'MiscVal'],
+    #           axis=1, inplace=True)
+    # self.df.drop(['Utilities', 'RoofMatl', 'MasVnrArea', 'BsmtFinSF1', 'BsmtFinSF2', 'BsmtUnfSF', 'Heating', 'LowQualFinSF',
+    #            'BsmtFullBath', 'BsmtHalfBath', 'Functional', 'GarageYrBlt', 'GarageArea', 'GarageCond', 'WoodDeckSF',
+    #            'OpenPorchSF', 'EnclosedPorch', '3SsnPorch', 'ScreenPorch', 'PoolArea', 'PoolQC', 'Fence', 'MiscFeature', 'MiscVal'],
+    #           axis=1, inplace=True)
+    # self.test_df.drop(['Utilities', 'RoofMatl', 'MasVnrArea', 'BsmtFinSF1', 'BsmtFinSF2', 'BsmtUnfSF', 'Heating', 'LowQualFinSF',
+    #            'BsmtFullBath', 'BsmtHalfBath', 'Functional', 'GarageYrBlt', 'GarageArea', 'GarageCond', 'WoodDeckSF',
+    #            'OpenPorchSF', 'EnclosedPorch', '3SsnPorch', 'ScreenPorch', 'PoolArea', 'PoolQC', 'Fence', 'MiscFeature', 'MiscVal'],
+    #           axis=1, inplace=True)
     # self.all_df = pd.concat((self.df.loc[:,"MSSubClass":"SaleCondition"], self.test_df.loc[:,"MSSubClass":"SaleCondition"]))
 
   def preProcessing(self):
@@ -107,6 +153,7 @@ class MachineLearning:
     self.all_df = self.all_df.fillna(self.all_df.mean())
     self.df = self.df.fillna(self.df.mean())
     self.test_df = self.test_df.fillna(self.test_df.mean())
+
 
 
 
